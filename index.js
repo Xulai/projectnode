@@ -42,6 +42,7 @@ function setupTTN() {
     
     ttn.data(appID, accessKey)
         .then((client) => {
+            console.log("Connected to TTN");
             client.on("uplink", saveData)
         })
         .catch((error) => {
@@ -50,19 +51,18 @@ function setupTTN() {
         });
 }
 
-
 function saveData(devID, payload) {
     console.log("Received uplink from ", devID);
     console.log(payload);
 
     //Save to influx
-    // influx.writePoints([
-    //     {
-    //       measurement: 'response_times',
-    //       tags: { host: os.hostname() },
-    //       fields: { duration, path: req.path },
-    //     }
-    // ]).then(() => {
-    //     console.log("Saved data to influx");
-    // });
+    influx.writePoints([
+        {
+          measurement: 'response_times',
+          tags: { host: os.hostname() },
+          fields: { duration, path: req.path },
+        }
+    ]).then(() => {
+        console.log("Saved data to influx");
+    });
 }
