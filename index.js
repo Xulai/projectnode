@@ -12,12 +12,14 @@ const influx = new Influx.InfluxDB({
     database: process.env.DB_NAME,
     schema: [
         {
-            measurement: 'depth_readings',
+            measurement: 'readings',
             fields: {
-                depth: Influx.FieldType.INTEGER,
+                reading: Influx.FieldType.INTEGER,
+                power: Influx.FieldType.INTEGER,
+                display_type: Influx.FieldType.STRING,
             },
             tags: [
-                'device'
+                'device', 'type'
             ]
         }
     ]
@@ -48,21 +50,28 @@ function setupTTN() {
             console.error("Error", error);
             process.exit(1);
         });
+
+    console.log("Connected to TTN");
 }
 
 
 function saveData(devID, payload) {
     console.log("Received uplink from ", devID);
-    console.log(payload);
-
     //Save to influx
-    // influx.writePoints([
-    //     {
-    //       measurement: 'response_times',
-    //       tags: { host: os.hostname() },
-    //       fields: { duration, path: req.path },
-    //     }
-    // ]).then(() => {
-    //     console.log("Saved data to influx");
-    // });
+    influx.writePoints([
+        {
+            measurement: 'readings',
+            tags: { 
+                device: payload.dev_id,
+                type: payload.payload_fields.type
+            },
+            fields: { 
+                reading: payload.payload_fields.reading,
+                power: payload.payload_fields.power,
+                display_type: payload.payload_fields.display_type,
+            },
+        }
+    ]).then(() => {
+        console.log("Saved data to influx");
+    });
 }
