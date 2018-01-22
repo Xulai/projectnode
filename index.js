@@ -44,6 +44,7 @@ function setupTTN() {
     
     ttn.data(appID, accessKey)
         .then((client) => {
+            console.log("Connected to TTN");
             client.on("uplink", saveData)
         })
         .catch((error) => {
@@ -53,7 +54,6 @@ function setupTTN() {
 
     console.log("Connected to TTN");
 }
-
 
 function saveData(devID, payload) {
     console.log("Received uplink from ", devID);
