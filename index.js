@@ -2,11 +2,13 @@ require('dotenv').config()
 var ttn = require("ttn");
 var Influx = require('influx');
 
+// Load connection params for .env
 var appID = process.env.APP_ID;
 var accessKey = process.env.ACCESS_KEY;
 
 console.log('Connecting to Influx');
 
+// Setup connection params and the schema for InfluxDB 
 const influx = new Influx.InfluxDB({
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
@@ -21,13 +23,25 @@ const influx = new Influx.InfluxDB({
             tags: [
                 'device', 'type'
             ]
+        },
+        {
+            measurement: 'errors',
+            fields: {
+                power: Influx.FieldType.INTEGER,
+                display_type: Influx.FieldType.STRING,
+            },
+            tags: [
+                'device', 'type'
+            ]
         }
     ]
 })
 
+// Connect to InfluxDB, if database doesn't exist then create it using the schema above.
 influx.getDatabaseNames()
     .then(names => {
         if (!names.includes(process.env.DB_NAME)) {
+            console.log(`Creating database`);
             return influx.createDatabase(process.env.DB_NAME);
         }
     })
@@ -39,13 +53,16 @@ influx.getDatabaseNames()
         console.error(`Error creating Influx database!`);
     })
 
+/**
+ * Connect to The Things Network to receive data uplinks from.
+ */
 function setupTTN() {
     console.log("Connecting to TTN");
     
     ttn.data(appID, accessKey)
         .then((client) => {
             console.log("Connected to TTN");
-            client.on("uplink", saveData)
+            client.on("uplink", uplink)
         })
         .catch((error) => {
             console.error("Error", error);
@@ -55,8 +72,40 @@ function setupTTN() {
     console.log("Connected to TTN");
 }
 
-function saveData(devID, payload) {
-    console.log("Received uplink from ", devID);
+
+
+/**
+ * Handle the data uplink received from The Things Network
+ * 
+ * @param {String} devId 
+ * @param {Object} payload 
+ */
+function uplink(devId, payload) {
+    console.log("Received uplink from ", devId);
+
+    switch (payload.payload_fields.display_type) {
+        case "Reading":
+            saveData(payload);
+            break;
+        case "Error":
+        case "Microcontroller Error":
+        case "Sensor Error":
+        case "Battery Error":
+        case "Storage Error":
+            error(payload);
+            break;
+        default:
+            stillHere(payload);
+            break;
+    }
+} 
+
+/**
+ * Save a reading into influxdb.
+ * 
+ * @param {Object} payload 
+ */
+function saveData(payload) {
     //Save to influx
     influx.writePoints([
         {
@@ -74,4 +123,55 @@ function saveData(devID, payload) {
     ]).then(() => {
         console.log("Saved data to influx");
     });
+}
+
+/**
+ * Save an error payload into influxdb
+ * 
+ * @param {Object} payload 
+ */
+function errorPayload(payload) {
+    //Save to influx
+    influx.writePoints([
+        {
+            measurement: 'errors',
+            tags: { 
+                device: payload.dev_id,
+                type: payload.payload_fields.type
+            },
+            fields: { 
+                power: payload.payload_fields.power,
+                display_type: payload.payload_fields.display_type,
+            },
+        }
+    ]).then(() => {
+        console.log("Saved data to influx");
+    });
+}
+
+/**
+ * On still here save last reading gotten again.
+ * 
+ * @param {Object} payload 
+ */
+function stillHere(payload) {
+    influx.query('select LAST("reading") from readings').then(function(results) {
+        //Save to influx
+        influx.writePoints([
+            {
+                measurement: 'readings',
+                tags: { 
+                    device: payload.dev_id,
+                    type: payload.payload_fields.type
+                },
+                fields: { 
+                    reading: results[0].last,
+                    power: payload.payload_fields.power,
+                    display_type: payload.payload_fields.display_type,
+                },
+            }
+        ]).then(() => {
+            console.log("Saved data to influx");
+        });
+    })
 }
