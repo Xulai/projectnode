@@ -79,10 +79,10 @@ function seedData() {
 
             var minModi = -10;
             var maxModi = 10;
-            if(lastReading == -500) {
+            if(lastReading <= -500) {
                 minModi = 0;
             }
-            if(lastReading == 500) {
+            if(lastReading >= 500) {
                 maxModi = 0;
             } 
 
