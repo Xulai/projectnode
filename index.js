@@ -17,21 +17,19 @@ const influx = new Influx.InfluxDB({
             measurement: 'readings',
             fields: {
                 reading: Influx.FieldType.INTEGER,
-                power: Influx.FieldType.INTEGER,
-                display_type: Influx.FieldType.STRING,
+                power: Influx.FieldType.INTEGER
             },
             tags: [
-                'device', 'type'
+                'device', 'type', 'display_type'
             ]
         },
         {
             measurement: 'errors',
             fields: {
-                power: Influx.FieldType.INTEGER,
-                display_type: Influx.FieldType.STRING,
+                power: Influx.FieldType.INTEGER
             },
             tags: [
-                'device', 'type'
+                'device', 'type', 'display_type'
             ]
         }
     ]
@@ -112,12 +110,12 @@ function saveData(payload) {
             measurement: 'readings',
             tags: { 
                 device: payload.dev_id,
-                type: payload.payload_fields.type
+                type: payload.payload_fields.type,
+                display_type: payload.payload_fields.display_type
             },
             fields: { 
                 reading: payload.payload_fields.reading,
-                power: payload.payload_fields.power,
-                display_type: payload.payload_fields.display_type,
+                power: payload.payload_fields.power
             },
         }
     ]).then(() => {
@@ -137,11 +135,11 @@ function errorPayload(payload) {
             measurement: 'errors',
             tags: { 
                 device: payload.dev_id,
-                type: payload.payload_fields.type
+                type: payload.payload_fields.type,
+                display_type: payload.payload_fields.display_type
             },
             fields: { 
-                power: payload.payload_fields.power,
-                display_type: payload.payload_fields.display_type,
+                power: payload.payload_fields.power
             },
         }
     ]).then(() => {
@@ -162,12 +160,12 @@ function stillHere(payload) {
                 measurement: 'readings',
                 tags: { 
                     device: payload.dev_id,
-                    type: payload.payload_fields.type
+                    type: payload.payload_fields.type,
+                    display_type: payload.payload_fields.display_type
                 },
                 fields: { 
                     reading: results[0].last,
-                    power: payload.payload_fields.power,
-                    display_type: payload.payload_fields.display_type,
+                    power: payload.payload_fields.power
                 },
             }
         ]).then(() => {
