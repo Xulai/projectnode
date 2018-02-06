@@ -8,6 +8,11 @@ redis = Redis.createClient();
 var appID = process.env.APP_ID;
 var accessKey = process.env.ACCESS_KEY;
 
+//Whitelist
+var whitelist = [
+    '0004a30b0019bc1a'
+];
+
 console.log('Connecting to Influx');
 
 // Setup connection params and the schema for InfluxDB 
@@ -85,6 +90,10 @@ function setupTTN() {
 function uplink(devId, payload) {
     console.log("Received uplink from ", devId);
 
+    if(whitelist.indexOf(devId) === -1) {
+        return;
+    }
+
     switch (payload.payload_fields.display_type) {
         case "Reading":
             saveData(payload);
@@ -108,7 +117,7 @@ function uplink(devId, payload) {
  * @param {Object} payload 
  */
 function saveData(payload) {
-    redis.set('lastReading', payload.payload_fields.reading);
+    redis.set('lastReading-'+payload.dev_id, payload.payload_fields.reading);
 
     //Save to influx
     influx.writePoints([
@@ -160,7 +169,7 @@ function errorPayload(payload) {
  */
 function stillHere(payload) {
     //Save to influx
-    redis.get("lastReading", function(err, reply) {
+    redis.get("lastReading-"+payload.dev_id, function(err, reply) {
         if (reply) {
             influx.writePoints([
                 {

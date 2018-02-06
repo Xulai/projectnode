@@ -46,6 +46,7 @@ function Converter(decoded, port) {
 }
 
 function Validator(converted, port) {
+    
     // Fail if invalid type
     if(converted.type > 6 || converted.type < 0) {
         return false;
