@@ -1,10 +1,13 @@
-require('dotenv').config()
-var ttn = require("ttn");
+// Require dotenv library to use .env variables
+require('dotenv').config();
+// Require influx, redis and the things network(tnn) libraries
 var Influx = require('influx');
-var Redis = require("redis"),
+var Redis = require("redis");
+var ttn = require("ttn");
+// Connect to redis
 redis = Redis.createClient();
 
-// Load connection params for .env
+// Load connection params from .env to connect to ttn
 var appID = process.env.APP_ID;
 var accessKey = process.env.ACCESS_KEY;
 
@@ -62,9 +65,10 @@ influx.getDatabaseNames()
         console.error(`Error creating Influx database!`);
     })
 
-/**
- * Connect to The Things Network to receive data uplinks from.
- */
+ /**
+  * Connect to The Things Network to receive data uplinks from.
+  * @return {[type]} [description]
+  */
 function setupTTN() {
     console.log("Connecting to TTN");
     
