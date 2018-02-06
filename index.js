@@ -1,8 +1,8 @@
 require('dotenv').config()
 var ttn = require("ttn");
 var Influx = require('influx');
-var redis = require("redis"),
-client = redis.createClient();
+var Redis = require("redis"),
+redis = Redis.createClient();
 
 // Load connection params for .env
 var appID = process.env.APP_ID;
@@ -36,6 +36,10 @@ const influx = new Influx.InfluxDB({
         }
     ]
 })
+
+redis.on("error", function (err) {
+    console.log("Error " + err);
+});
 
 // Connect to InfluxDB, if database doesn't exist then create it using the schema above.
 influx.getDatabaseNames()
@@ -72,8 +76,6 @@ function setupTTN() {
     console.log("Connected to TTN");
 }
 
-
-
 /**
  * Handle the data uplink received from The Things Network
  * 
@@ -106,6 +108,8 @@ function uplink(devId, payload) {
  * @param {Object} payload 
  */
 function saveData(payload) {
+    redis.set('lastReading', payload.payload_fields.reading);
+
     //Save to influx
     influx.writePoints([
         {
@@ -155,23 +159,27 @@ function errorPayload(payload) {
  * @param {Object} payload 
  */
 function stillHere(payload) {
-    influx.query('select LAST("reading") from readings').then(function(results) {
-        //Save to influx
-        influx.writePoints([
-            {
-                measurement: 'readings',
-                tags: { 
-                    device: payload.dev_id,
-                    type: payload.payload_fields.type,
-                    display_type: payload.payload_fields.display_type
-                },
-                fields: { 
-                    reading: results[0].last,
-                    power: payload.payload_fields.power
-                },
-            }
-        ]).then(() => {
-            console.log("Saved data to influx");
-        });
-    })
+    //Save to influx
+    redis.get("lastReading", function(err, reply) {
+        if (reply) {
+            influx.writePoints([
+                {
+                    measurement: 'readings',
+                    tags: { 
+                        device: payload.dev_id,
+                        type: payload.payload_fields.type,
+                        display_type: payload.payload_fields.display_type
+                    },
+                    fields: { 
+                        reading: reply,
+                        power: payload.payload_fields.power
+                    },
+                }
+            ]).then(() => {
+                console.log("Saved data to influx");
+            });
+        } else {
+            console.log(err);
+        }
+    });
 }
