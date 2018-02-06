@@ -82,11 +82,10 @@ function seedData() {
             // The min, max modifiers to choose an int between
             var minModi = -10;
             var maxModi = 10;
-            // If the readings are already at the min/max then cap the modifier at 0
-            if(lastReading == -500) {
+            if(lastReading <= -500) {
                 minModi = 0;
             }
-            if(lastReading == 500) {
+            if(lastReading >= 500) {
                 maxModi = 0;
             } 
 
