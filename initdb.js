@@ -69,16 +69,20 @@ influx.getDatabaseNames()
 function seedData() {
     var points = [];
 
+    // Create readings and errors for 6 devices with the names from abc0 through abc5
     for(var deviceCount = 0; deviceCount < 6; deviceCount++) {
         var curTime = moment();
         var deviceName = 'abc' + deviceCount;
         var lastReading = chance.integer({min: -250, max: 250});
         var lastPower = chance.integer({min: 80, max: 100});
-    
+        
+        // Get a reading fake taken at 30 min intervals for 3 years for each device
         for(var readingCount = 0; readingCount < 70080; readingCount++) {
 
+            // The min, max modifiers to choose an int between
             var minModi = -10;
             var maxModi = 10;
+            // If the readings are already at the min/max then cap the modifier at 0
             if(lastReading == -500) {
                 minModi = 0;
             }
@@ -86,17 +90,20 @@ function seedData() {
                 maxModi = 0;
             } 
 
+            // Get the new reading, changing the value based on the modifiers above
             var newReading = lastReading + chance.integer({min: minModi, max: maxModi});
 
+            // Have a chance to reset and charge the battery
             if(lastPower < 2 || (lastPower < 20 & chance.bool())) {
                 var newPower = chance.integer({min: 80, max: 100}); 
             } else {
+                // Else calculate the new power by taking away one or two points
                 var newPower = lastPower + chance.integer({min: -5, max: 0});
                 if(newPower < 1) {
                     newPower = 1;
                 }
             }
-
+            // Push a reading to create
             points.push({
                 measurement: 'readings',
                 tags: { 
@@ -110,13 +117,17 @@ function seedData() {
                 },
                 timestamp: '' + curTime.valueOf() + '000000',
             });
+            // Go back in time 30 minutes for the next reading
             curTime = curTime.subtract(30, 'minutes');
         }
-            
+        
+        // Make a random amount (2-20) of errors for each device
         for(var errorCount = 0; errorCount < chance.integer({min: 2, max: 20}); errorCount++) {
+            // Pick a random valid error type + a random power level
             var powerLevel = chance.integer({min: 1, max: 100});
             var errorType = chance.integer({min: 2, max: 6});
 
+            // Push the error point to create
             points.push({
                 measurement: 'errors',
                 tags: { 
@@ -126,14 +137,17 @@ function seedData() {
                 },
                 fields: { 
                     power: powerLevel
-                },
+                }, 
+                // Random timestamp between the 3 years worth of readings
                 timestamp: '' + moment().subtract(chance.integer({min: 2, max: 2102400}),'minutes').valueOf() + '000000',
             });
         }
     }
 
+    // Seperate out the points into arrays of 5000 to not overload influx by writing them all at once
     points = chunkArray(points, 5000);
 
+    // Insert all the points into influx
     for(var pointCount = 0; pointCount < points.length; pointCount++) {
         influx.writePoints(points[pointCount]);
     }
@@ -167,8 +181,8 @@ function getDisplayType(type) {
 
 /**
  * It splices out the passed in array into arrays with a length of the passed in chunk size.
- * @param {*} arrayToChunk The array to make array chunks from
- * @param {*} chunkSize Size of the chunks to make
+ * @param {Array} arrayToChunk The array to make array chunks from
+ * @param {number} chunkSize Size of the chunks to make
  */
 function chunkArray(arrayToChunk, chunkSize){
     var results = [];

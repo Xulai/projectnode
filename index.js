@@ -1,6 +1,8 @@
 require('dotenv').config()
 var ttn = require("ttn");
 var Influx = require('influx');
+var redis = require("redis"),
+client = redis.createClient();
 
 // Load connection params for .env
 var appID = process.env.APP_ID;
