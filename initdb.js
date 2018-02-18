@@ -23,6 +23,17 @@ const influx = new Influx.InfluxDB({
             measurement: 'readings',
             fields: {
                 reading: Influx.FieldType.INTEGER,
+                prev_difference_val: Influx.FieldType.INTEGER,
+                prev_difference_pct: Influx.FieldType.INTEGER,
+                power: Influx.FieldType.INTEGER
+            },
+            tags: [
+                'device', 'type', 'display_type'
+            ]
+        },
+        {
+            measurement: 'still_heres',
+            fields: {
                 power: Influx.FieldType.INTEGER
             },
             tags: [
@@ -107,20 +118,40 @@ function seedData() {
                     newPower = 1;
                 }
             }
-            // Push a reading to create
-            points.push({
-                measurement: 'readings',
-                tags: { 
-                    device: deviceName,
-                    type: lastReading == newReading ? 0 : 1,
-                    display_type: getDisplayType(lastReading == newReading ? 0 : 1)
-                },
-                fields: { 
-                    reading: newReading,
-                    power: newPower
-                },
-                timestamp: '' + curTime.valueOf() + '000000',
-            });
+
+            if(lastReading == newReading) {
+                // Push the error point to create
+                points.push({
+                    measurement: 'still_heres',
+                    tags: { 
+                        device: deviceName,
+                        type: 0,
+                        display_type: getDisplayType(0)
+                    },
+                    fields: { 
+                        power: newPower
+                    }, 
+                    // Random timestamp between the 3 years worth of readings
+                    timestamp: '' + curTime.valueOf() + '000000',
+                });
+            } else {
+                // Push a reading to create
+                points.push({
+                    measurement: 'readings',
+                    tags: { 
+                        device: deviceName,
+                        type: lastReading == newReading ? 0 : 1,
+                        display_type: getDisplayType(lastReading == newReading ? 0 : 1)
+                    },
+                    fields: { 
+                        reading: newReading,
+                        power: newPower
+                    },
+                    timestamp: '' + curTime.valueOf() + '000000',
+                });
+            }
+
+            
             // Go back in time 30 minutes for the next reading
             curTime = curTime.subtract(30, 'minutes');
         }

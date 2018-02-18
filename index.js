@@ -27,6 +27,17 @@ const influx = new Influx.InfluxDB({
             measurement: 'readings',
             fields: {
                 reading: Influx.FieldType.INTEGER,
+                prev_difference_val: Influx.FieldType.INTEGER,
+                prev_difference_pct: Influx.FieldType.INTEGER,
+                power: Influx.FieldType.INTEGER
+            },
+            tags: [
+                'device', 'type', 'display_type'
+            ]
+        },
+        {
+            measurement: 'still_heres',
+            fields: {
                 power: Influx.FieldType.INTEGER
             },
             tags: [
@@ -100,7 +111,7 @@ function uplink(devId, payload) {
 
     switch (payload.payload_fields.display_type) {
         case "Reading":
-            saveData(payload);
+            saveData(payload, redisValueDifferences(payload));
             break;
         case "Error":
         case "Microcontroller Error":
@@ -115,12 +126,15 @@ function uplink(devId, payload) {
     }
 } 
 
+
 /**
  * Save a reading into influxdb.
  * 
  * @param {Object} payload 
  */
-function saveData(payload) {
+function saveData(payload, callback) {
+
+    
     redis.set('lastReading-'+payload.dev_id, payload.payload_fields.reading);
 
     //Save to influx
@@ -165,6 +179,89 @@ function errorPayload(payload) {
         console.log("Saved data to influx");
     });
 }
+
+/**
+ * [valueDifferences description]
+ * @param  {[type]} payload [description]
+ * @return {[type]}         [description]
+ */
+function redisValueDifferences(payload) {
+
+    redis.get("lastReading-"+payload.dev_id, function(err, reply) {
+        if (reply) {
+            var prevDifferenceVal = reply - payload.payload_fields.reading;
+            var prevDifferencePct = prevDifferenceVal; 
+            influx.writePoints([
+                {
+                    measurement: 'readings',
+                    tags: { 
+                        device: payload.dev_id,
+                        type: payload.payload_fields.type,
+                        display_type: payload.payload_fields.display_type
+                    },
+                    fields: { 
+                        reading: payload.payload_fields.reading,
+                        prev_difference_val: prevDifferenceVal,
+                        prev_difference_pct: prevDifferencePct,
+                        power: payload.payload_fields.power
+                    },
+                }
+            ]).then(() => {
+                console.log("Saved data to influx");
+            });
+        } else {
+            influx.query('select LAST("reading") from readings').then(function(results) {
+                if(results.length > 0) {
+                    //Save to influx
+                    influx.writePoints([
+                        {
+                            measurement: 'readings',
+                            tags: { 
+                                device: payload.dev_id,
+                                type: payload.payload_fields.type,
+                                display_type: payload.payload_fields.display_type
+                            },
+                            fields: { 
+                                reading: results[0].last,
+                                prev_difference_val: Influx.FieldType.INTEGER,
+                                prev_difference_pct: Influx.FieldType.INTEGER,
+                                power: payload.payload_fields.power
+                            },
+                        }
+                    ]).then(() => {
+                        console.log("Saved data to influx");
+                    });
+                } else {
+                    //Save to influx
+                    influx.writePoints([
+                        {
+                            measurement: 'readings',
+                            tags: { 
+                                device: payload.dev_id,
+                                type: payload.payload_fields.type,
+                                display_type: payload.payload_fields.display_type
+                            },
+                            fields: { 
+                                reading: results[0].last,
+                                prev_difference_val: Influx.FieldType.INTEGER,
+                                prev_difference_pct: Influx.FieldType.INTEGER,
+                                power: payload.payload_fields.power
+                            },
+                        }
+                    ]).then(() => {
+                        console.log("Saved data to influx");
+                    });
+                }
+                
+            })
+        }
+    });
+
+
+}
+
+
+
 
 /**
  * On still here save last reading gotten again.
