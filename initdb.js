@@ -1,7 +1,11 @@
+// Require dotenv library to use .env variables
 require('dotenv').config()
+// Require influx, moment, chance and the things network(tnn) libraries
 var Influx = require('influx');
 var ttn = require("ttn");
+// Timestamp library
 var moment = require('moment');
+// Seeding library
 var chance = require('chance').Chance();
 
 // Load connection params for .env
@@ -65,6 +69,7 @@ influx.getDatabaseNames()
 /**
  * For 6 fake device it will create readings to mock having them taken every 30 minutes for 3 years.
  * Then afterwards create a random amount of errors for each device.
+ * @return {[type]} [description]
  */
 function seedData() {
     var points = [];

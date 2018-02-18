@@ -1,3 +1,8 @@
+/**
+ * Take bytes and turn it into fields
+ * @param {[type]} bytes [description]
+ * @param {[type]} port  [description]
+ */
 function Decoder(bytes, port) {
     // Decode an uplink message from a buffer
     // (array) of bytes to an object of fields.
@@ -14,6 +19,11 @@ function Decoder(bytes, port) {
     return decoded;
 }
 
+/**
+ * Making raw data readable
+ * @param {[type]} decoded [description]
+ * @param {[type]} port    [description]
+ */
 function Converter(decoded, port) {
     // Merge, split or otherwise
     // mutate decoded fields.
@@ -45,6 +55,11 @@ function Converter(decoded, port) {
     return converted;
 }
 
+/**
+ * If data doesn't meet these requirements, nothing gets passed
+ * @param {[type]} converted [description]
+ * @param {[type]} port      [description]
+ */
 function Validator(converted, port) {
     
     // Fail if invalid type
