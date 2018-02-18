@@ -73,19 +73,19 @@ function seedData() {
     for(var deviceCount = 0; deviceCount < 6; deviceCount++) {
         var curTime = moment();
         var deviceName = 'abc' + deviceCount;
-        var lastReading = chance.integer({min: -250, max: 250});
+        var lastReading = chance.integer({min: 1250, max: 3750});
         var lastPower = chance.integer({min: 80, max: 100});
         
         // Get a reading fake taken at 30 min intervals for 3 years for each device
         for(var readingCount = 0; readingCount < 70080; readingCount++) {
 
             // The min, max modifiers to choose an int between
-            var minModi = -10;
-            var maxModi = 10;
-            if(lastReading <= -500) {
+            var minModi = -30;
+            var maxModi = 30;
+            if(lastReading <= 0) {
                 minModi = 0;
             }
-            if(lastReading >= 500) {
+            if(lastReading >= 5000) {
                 maxModi = 0;
             } 
 

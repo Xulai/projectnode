@@ -52,7 +52,7 @@ function Validator(converted, port) {
         return false;
     }
     //Fail if power level is less than 1 (how can it send without power?) or above 100%
-    if(converted.power > 100 || converted.power < 1) {
+    if(converted.power > 100 || converted.power < 0) {
         return false;
     }
     // Fail if no reading when the type is for a reading
@@ -60,7 +60,7 @@ function Validator(converted, port) {
         return false;
     }
     // Fail if reading is above/below max/min value.
-    if(converted.reading !== undefined && (converted.reading < -500 || converted.reading > 500)) {
+    if(converted.reading !== undefined && (converted.reading < 0 || converted.reading > 5000)) {
         return false;
     } 
 
