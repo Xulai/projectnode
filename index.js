@@ -134,26 +134,79 @@ function uplink(devId, payload) {
  */
 function saveData(payload, callback) {
 
-    
-    redis.set('lastReading-'+payload.dev_id, payload.payload_fields.reading);
-
-    //Save to influx
-    influx.writePoints([
-        {
-            measurement: 'readings',
-            tags: { 
-                device: payload.dev_id,
-                type: payload.payload_fields.type,
-                display_type: payload.payload_fields.display_type
-            },
-            fields: { 
-                reading: payload.payload_fields.reading,
-                power: payload.payload_fields.power
-            },
+    redis.get("lastReading-"+payload.dev_id, function(err, reply) {
+        if (reply) {
+            var prevDifferenceVal = reply - payload.payload_fields.reading;
+            var prevDifferencePct = prevDifferenceVal; 
+            influx.writePoints([
+                {
+                    measurement: 'readings',
+                    tags: { 
+                        device: payload.dev_id,
+                        type: payload.payload_fields.type,
+                        display_type: payload.payload_fields.display_type
+                    },
+                    fields: { 
+                        reading: payload.payload_fields.reading,
+                        prev_difference_val: prevDifferenceVal,
+                        prev_difference_pct: prevDifferencePct,
+                        power: payload.payload_fields.power
+                    },
+                }
+            ]).then(() => {
+                console.log("Saved data to influx");
+            });
+        } else {
+            influx.query('select LAST("reading") from readings').then(function(results) {
+                if(results.length > 0) {
+                    var prevDifferenceVal = results[0].last - payload.payload_fields.reading;
+                    var prevDifferencePct = prevDifferenceVal; 
+                    //Save to influx
+                    influx.writePoints([
+                        {
+                            measurement: 'readings',
+                            tags: { 
+                                device: payload.dev_id,
+                                type: payload.payload_fields.type,
+                                display_type: payload.payload_fields.display_type
+                            },
+                            fields: { 
+                                reading: payload.payload_fields.reading,
+                                prev_difference_val: prevDifferenceVal,
+                                prev_difference_pct: prevDifferencePct,
+                                power: payload.payload_fields.power
+                            },
+                        }
+                    ]).then(() => {
+                        console.log("Saved data to influx");
+                    });
+                } else {
+                    //Save to influx
+                    influx.writePoints([
+                        {
+                            measurement: 'readings',
+                            tags: { 
+                                device: payload.dev_id,
+                                type: payload.payload_fields.type,
+                                display_type: payload.payload_fields.display_type
+                            },
+                            fields: { 
+                                reading: payload.payload_fields.reading,
+                                prev_difference_val: 0,
+                                prev_difference_pct: 0,
+                                power: payload.payload_fields.power
+                            },
+                        }
+                    ]).then(() => {
+                        console.log("Saved data to influx");
+                    });
+                }
+                
+            })
         }
-    ]).then(() => {
-        console.log("Saved data to influx");
     });
+
+    redis.set('lastReading-'+payload.dev_id, payload.payload_fields.reading);
 }
 
 /**
@@ -181,115 +234,24 @@ function errorPayload(payload) {
 }
 
 /**
- * [valueDifferences description]
- * @param  {[type]} payload [description]
- * @return {[type]}         [description]
- */
-function redisValueDifferences(payload) {
-
-    redis.get("lastReading-"+payload.dev_id, function(err, reply) {
-        if (reply) {
-            var prevDifferenceVal = reply - payload.payload_fields.reading;
-            var prevDifferencePct = prevDifferenceVal; 
-            influx.writePoints([
-                {
-                    measurement: 'readings',
-                    tags: { 
-                        device: payload.dev_id,
-                        type: payload.payload_fields.type,
-                        display_type: payload.payload_fields.display_type
-                    },
-                    fields: { 
-                        reading: payload.payload_fields.reading,
-                        prev_difference_val: prevDifferenceVal,
-                        prev_difference_pct: prevDifferencePct,
-                        power: payload.payload_fields.power
-                    },
-                }
-            ]).then(() => {
-                console.log("Saved data to influx");
-            });
-        } else {
-            influx.query('select LAST("reading") from readings').then(function(results) {
-                if(results.length > 0) {
-                    //Save to influx
-                    influx.writePoints([
-                        {
-                            measurement: 'readings',
-                            tags: { 
-                                device: payload.dev_id,
-                                type: payload.payload_fields.type,
-                                display_type: payload.payload_fields.display_type
-                            },
-                            fields: { 
-                                reading: results[0].last,
-                                prev_difference_val: Influx.FieldType.INTEGER,
-                                prev_difference_pct: Influx.FieldType.INTEGER,
-                                power: payload.payload_fields.power
-                            },
-                        }
-                    ]).then(() => {
-                        console.log("Saved data to influx");
-                    });
-                } else {
-                    //Save to influx
-                    influx.writePoints([
-                        {
-                            measurement: 'readings',
-                            tags: { 
-                                device: payload.dev_id,
-                                type: payload.payload_fields.type,
-                                display_type: payload.payload_fields.display_type
-                            },
-                            fields: { 
-                                reading: results[0].last,
-                                prev_difference_val: Influx.FieldType.INTEGER,
-                                prev_difference_pct: Influx.FieldType.INTEGER,
-                                power: payload.payload_fields.power
-                            },
-                        }
-                    ]).then(() => {
-                        console.log("Saved data to influx");
-                    });
-                }
-                
-            })
-        }
-    });
-
-
-}
-
-
-
-
-/**
  * On still here save last reading gotten again.
  * 
  * @param {Object} payload 
  */
 function stillHere(payload) {
-    //Save to influx
-    redis.get("lastReading-"+payload.dev_id, function(err, reply) {
-        if (reply) {
-            influx.writePoints([
-                {
-                    measurement: 'readings',
-                    tags: { 
-                        device: payload.dev_id,
-                        type: payload.payload_fields.type,
-                        display_type: payload.payload_fields.display_type
-                    },
-                    fields: { 
-                        reading: reply,
-                        power: payload.payload_fields.power
-                    },
-                }
-            ]).then(() => {
-                console.log("Saved data to influx");
-            });
-        } else {
-            console.log(err);
+    influx.writePoints([
+        {
+            measurement: 'still_heres',
+            tags: { 
+                device: payload.dev_id,
+                type: payload.payload_fields.type,
+                display_type: payload.payload_fields.display_type
+            },
+            fields: {
+                power: payload.payload_fields.power
+            },
         }
+    ]).then(() => {
+        console.log("Saved data to influx");
     });
 }
