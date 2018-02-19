@@ -70,30 +70,59 @@ influx.getDatabaseNames()
     })
     .then(() => {
         console.log(`Database connected`);
-        setupTTN();
+        setupTtnApp();
     })
     .catch(err => {
         console.error(`Error creating Influx database!`);
     })
 
  /**
-  * Connect to The Things Network to receive data uplinks from.
-  * @return {[type]} [description]
+  * Connect to The Things Network to access the application api.
   */
-function setupTTN() {
-    console.log("Connecting to TTN");
-    
-    ttn.data(appID, accessKey)
+function setupTtnApp() {
+    console.log("Connecting to TTN Application API");
+
+    ttn.application(appID, accessKey)
         .then((client) => {
-            console.log("Connected to TTN");
-            client.on("uplink", uplink)
+            console.log("Connected to TTN Application API");
+            console.log("Getting device list");
+            client.devices()
+                .then((devices) => {
+                    if(devices != undefined && devices != null && devices != []) {
+                        whitelist = devices.map(d => d['devEui']);
+                    }
+                    console.log("Updated Whitelist from device list");
+                    setupTtnData();
+                })
+                .catch((error) => {
+                    console.error("Unable to get device list", error);
+                    setupTtnData();
+                });
         })
         .catch((error) => {
-            console.error("Error", error);
+            console.error("Unable to connect to TTN Application API", error);
             process.exit(1);
         });
 
-    console.log("Connected to TTN");
+}
+    
+
+ /**
+  * Connect to The Things Network to receive data uplinks from.
+  */
+function setupTtnData() {
+    console.log("Connecting to TTN Data API");
+
+    ttn.data(appID, accessKey)
+        .then((client) => {
+            console.log("Connected to TTN Data API");
+            console.log("Awaiting Uplinks");
+            client.on("uplink", uplink)
+        })
+        .catch((error) => {
+            console.error("Unable to connect to TTN Data API", error);
+            process.exit(1);
+        });
 }
 
 /**
@@ -111,7 +140,7 @@ function uplink(devId, payload) {
 
     switch (payload.payload_fields.display_type) {
         case "Reading":
-            saveData(payload, redisValueDifferences(payload));
+            saveData(payload);
             break;
         case "Error":
         case "Microcontroller Error":
@@ -132,7 +161,7 @@ function uplink(devId, payload) {
  * 
  * @param {Object} payload 
  */
-function saveData(payload, callback) {
+function saveData(payload) {
 
     redis.get("lastReading-"+payload.dev_id, function(err, reply) {
         if (reply) {
