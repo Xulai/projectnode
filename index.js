@@ -165,8 +165,8 @@ function saveData(payload) {
 
     redis.get("lastReading-"+payload.dev_id, function(err, reply) {
         if (reply) {
-            var prevDifferenceVal = reply - payload.payload_fields.reading;
-            var prevDifferencePct = prevDifferenceVal; 
+            var prevDiffVal = payload.payload_fields.reading - reply;
+            var prevDiffPct = (prevDiffVal / reply) * 100;
             influx.writePoints([
                 {
                     measurement: 'readings',
@@ -177,8 +177,8 @@ function saveData(payload) {
                     },
                     fields: { 
                         reading: payload.payload_fields.reading,
-                        prev_difference_val: prevDifferenceVal,
-                        prev_difference_pct: prevDifferencePct,
+                        prev_difference_val: prevDiffVal,
+                        prev_difference_pct: prevDiffPct,
                         power: payload.payload_fields.power
                     },
                 }
@@ -188,8 +188,8 @@ function saveData(payload) {
         } else {
             influx.query('select LAST("reading") from readings').then(function(results) {
                 if(results.length > 0) {
-                    var prevDifferenceVal = results[0].last - payload.payload_fields.reading;
-                    var prevDifferencePct = prevDifferenceVal; 
+                    var prevDiffVal = payload.payload_fields.reading - results[0].last;
+                    var prevDiffPct = (prevDiffVal / results[0].last) * 100;
                     //Save to influx
                     influx.writePoints([
                         {
@@ -201,8 +201,8 @@ function saveData(payload) {
                             },
                             fields: { 
                                 reading: payload.payload_fields.reading,
-                                prev_difference_val: prevDifferenceVal,
-                                prev_difference_pct: prevDifferencePct,
+                                prev_difference_val: prevDiffVal,
+                                prev_difference_pct: prevDiffPct,
                                 power: payload.payload_fields.power
                             },
                         }

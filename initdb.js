@@ -91,6 +91,7 @@ function seedData() {
         var deviceName = 'abc' + deviceCount;
         var lastReading = chance.integer({min: 1250, max: 3750});
         var lastPower = chance.integer({min: 80, max: 100});
+        var stillHereCount = 0;
         
         // Get a reading fake taken at 30 min intervals for 3 years for each device
         for(var readingCount = 0; readingCount < 70080; readingCount++) {
@@ -119,7 +120,7 @@ function seedData() {
                 }
             }
 
-            if(lastReading == newReading) {
+            if(lastReading == newReading && stillHereCount >= 24) {
                 // Push the error point to create
                 points.push({
                     measurement: 'still_heres',
@@ -134,8 +135,13 @@ function seedData() {
                     // Random timestamp between the 3 years worth of readings
                     timestamp: '' + curTime.valueOf() + '000000',
                 });
+                stillHereCount = 0;
+            } else if(lastReading == newReading) {
+                stillHereCount++;
             } else {
                 // Push a reading to create
+                var prevDiffVal = newReading - lastReading;
+                var prevDiffPct = (prevDiffVal / lastReading) * 100;
                 points.push({
                     measurement: 'readings',
                     tags: { 
@@ -145,10 +151,13 @@ function seedData() {
                     },
                     fields: { 
                         reading: newReading,
+                        prev_difference_val: prevDiffVal,
+                        prev_difference_pct: prevDiffPct,
                         power: newPower
                     },
                     timestamp: '' + curTime.valueOf() + '000000',
                 });
+                stillHereCount = 0;
             }
 
             
