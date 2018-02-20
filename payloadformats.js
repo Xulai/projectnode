@@ -81,3 +81,9 @@ function Validator(converted, port) {
 
     return true;
 }
+
+var exports = module.exports = {};
+
+exports.decode = Decoder;
+exports.convert = Converter;
+exports.validate = Validator;

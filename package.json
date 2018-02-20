@@ -7,6 +7,7 @@
     "chance": "^1.0.13",
     "dotenv": "^4.0.0",
     "influx": "^5.0.7",
+    "jasmine-node": "^1.14.5",
     "moment": "^2.20.1",
     "redis": "^2.8.0",
     "ttn": "^2.3.0-alpha.3"
